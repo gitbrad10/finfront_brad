@@ -5,9 +5,9 @@ pool:
 
 variables:
   - name: projectName
-    value: 'Training-Student-099'            # <-- Update this
+    value: 'Training-Sutdent-099'            # <-- Update this
   - name: buildPipelineName
-    value: 'finweb_yourname_build'          # <-- Update this
+    value: 'finweb_brad_build'          # <-- Update this
   - name: artifactName
     value: 'frontend'        
   - name: targetFile
