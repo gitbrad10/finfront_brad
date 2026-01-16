@@ -1,7 +1,7 @@
 trigger: none
 
-pool:
-  name: student-lab-pool
+#pool:
+#  name: student-lab-pool
 
 variables:
   - name: projectName
