@@ -87,22 +87,23 @@ steps:
     scriptType: 'bash'
     scriptLocation: 'inlineScript'
     inlineScript: |
-      echo "Applying B1 tier performance & timeout overrides..."
-      # 1. WEBSITE_RUN_FROM_PACKAGE=1: Mounts zip instantly (no slow unzip)
-      # 2. WEBSITES_CONTAINER_START_TIME_LIMIT=1800: Gives the slow B1 CPU 30 mins to boot before Azure kills it
+      echo "Force-applying B1 performance settings..."
+      # Use individual commands to ensure settings are not overwritten or set to null
       az webapp config appsettings set \
         --resource-group $(resourceGroup) \
         --name $(webAppName) \
-        --settings WEBSITE_RUN_FROM_PACKAGE=1 \
-                 WEBSITES_CONTAINER_START_TIME_LIMIT=1800 \
-                 SCM_COMMAND_IDLE_TIMEOUT=600
+        --settings WEBSITE_RUN_FROM_PACKAGE="1" \
+                  SCM_COMMAND_IDLE_TIMEOUT="600" \
+                  WEBSITES_CONTAINER_START_TIME_LIMIT="1800"
 
-      echo "Deploying deploy.zip asynchronously..."
-      # 3. --async true: Tells the CLI to stop polling and finish the task immediately
+      echo "Deploying deploy.zip with tracking DISABLED..."
+      # --async true: Returns control to the CLI immediately after upload
+      # --track-status false: Stops the 10-minute 'Starting the site' polling loop
       az webapp deploy \
         --resource-group $(resourceGroup) \
         --name $(webAppName) \
         --src-path deploy.zip \
         --type zip \
-        --async true
-  displayName: 'Deploy Artifact (Async for B1)'
+        --async true \
+        --track-status false
+  displayName: 'Deploy Optimized (No-Polling)'
