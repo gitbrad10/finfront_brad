@@ -83,15 +83,24 @@ steps:
 
 - task: AzureCLI@2
   inputs:
-    azureSubscription: 'AzureDevopsConnection'        # <-- Name of your service connection
+    azureSubscription: 'AzureDevopsConnection'
     scriptType: 'bash'
     scriptLocation: 'inlineScript'
     inlineScript: |
+      # 1. PRE-OPTIMIZE: Set settings BEFORE deploying to avoid B1 resource conflicts
+      echo "Configuring App Service for B1 performance..."
+      az webapp config appsettings set \
+        --resource-group $(resourceGroup) \
+        --name $(webAppName) \
+        --settings WEBSITE_RUN_FROM_PACKAGE=1 SCM_COMMAND_IDLE_TIMEOUT=600
+
+      # 2. DEPLOY: Since RUN_FROM_PACKAGE is now '1', this will mount the zip instantly
       echo "Deploying deploy.zip to Azure Web App: $(webAppName)..."
-      ls
       az webapp deploy \
         --resource-group $(resourceGroup) \
         --name $(webAppName) \
         --src-path deploy.zip \
         --type zip
-  displayName: 'Deploy Artifact to Azure Web App'
+  displayName: 'Deploy Optimized Artifact'
+  timeoutInMinutes: 20  # This prevents DevOps from killing the task at 10 mins
+
