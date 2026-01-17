@@ -87,20 +87,22 @@ steps:
     scriptType: 'bash'
     scriptLocation: 'inlineScript'
     inlineScript: |
-      # 1. PRE-OPTIMIZE: Set settings BEFORE deploying to avoid B1 resource conflicts
-      echo "Configuring App Service for B1 performance..."
+      echo "Applying B1 tier performance & timeout overrides..."
+      # 1. WEBSITE_RUN_FROM_PACKAGE=1: Mounts zip instantly (no slow unzip)
+      # 2. WEBSITES_CONTAINER_START_TIME_LIMIT=1800: Gives the slow B1 CPU 30 mins to boot before Azure kills it
       az webapp config appsettings set \
         --resource-group $(resourceGroup) \
         --name $(webAppName) \
-        --settings WEBSITE_RUN_FROM_PACKAGE=1 SCM_COMMAND_IDLE_TIMEOUT=600
+        --settings WEBSITE_RUN_FROM_PACKAGE=1 \
+                 WEBSITES_CONTAINER_START_TIME_LIMIT=1800 \
+                 SCM_COMMAND_IDLE_TIMEOUT=600
 
-      # 2. DEPLOY: Since RUN_FROM_PACKAGE is now '1', this will mount the zip instantly
-      echo "Deploying deploy.zip to Azure Web App: $(webAppName)..."
+      echo "Deploying deploy.zip asynchronously..."
+      # 3. --async true: Tells the CLI to stop polling and finish the task immediately
       az webapp deploy \
         --resource-group $(resourceGroup) \
         --name $(webAppName) \
         --src-path deploy.zip \
-        --type zip
-  displayName: 'Deploy Optimized Artifact'
-  timeoutInMinutes: 20  # This prevents DevOps from killing the task at 10 mins
-
+        --type zip \
+        --async true
+  displayName: 'Deploy Artifact (Async for B1)'
