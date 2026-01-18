@@ -41,7 +41,6 @@ steps:
     mkdir -p artifacts
     az pipelines runs artifact download --run-id $SELECTED_BUILD_ID --artifact-name $(artifactName) --path ./artifacts
 
-    # CRITICAL: We zip everything, assuming dependencies were installed in the build pipeline
     cd artifacts
     zip -r ../deploy.zip .
     cd ..
@@ -51,14 +50,14 @@ steps:
 
 - task: AzureCLI@2
   displayName: 'Apply Settings and Sync Deploy'
-  timeoutInMinutes: 20
+  timeoutInMinutes: 25
   inputs:
     azureSubscription: 'AzureDevopsConnection'
     scriptType: 'bash'
     scriptLocation: 'inlineScript'
     inlineScript: |
-      echo "Setting B1 performance flags..."
-      # SCM_DO_BUILD_DURING_DEPLOYMENT=false stops the 10-minute crash-prone build phase
+      echo "1. Setting B1 performance flags..."
+      # Plural WEBSITES_ is often required for Linux startup limits
       az webapp config appsettings set \
         --resource-group $(resourceGroup) \
         --name $(webAppName) \
@@ -67,9 +66,14 @@ steps:
           SCM_DO_BUILD_DURING_DEPLOYMENT="false" \
           WEBSITES_CONTAINER_START_TIME_LIMIT="1800"
 
-      echo "Executing synchronous deployment..."
-      # We removed --async so we can see if it actually works, 
-      # but it will be fast because SCM_DO_BUILD is false.
+      echo "2. Forcing Startup Command to override Django auto-detection..."
+      # This fixes the 'werkzeug.wsgi' error by explicitly telling Azure how to run Flask
+      az webapp config set \
+        --resource-group $(resourceGroup) \
+        --name $(webAppName) \
+        --startup-file "gunicorn --bind=0.0.0.0 --timeout 600 app:app"
+
+      echo "3. Executing synchronous deployment..."
       az webapp deploy \
         --resource-group $(resourceGroup) \
         --name $(webAppName) \
