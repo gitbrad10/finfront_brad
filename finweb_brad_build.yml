@@ -8,22 +8,34 @@ trigger:
     exclude:
     - '*.yml'
 
-#pool:
-#  name: student-lab-pool
-
 variables:
   - name: artifactName
     value: 'frontend'
 
 steps:
+# 1. Set Python version to ensure compatibility
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: '3.x'
+  displayName: 'Use Python 3.x'
+
 - script: |
-    echo "Packaging frontend app..."
-    mkdir $(Build.ArtifactStagingDirectory)/package
+    echo "Creating package directory..."
+    mkdir -p $(Build.ArtifactStagingDirectory)/package
+
+    echo "Installing dependencies into package folder..."
+    # --target ensures libraries are installed LOCALLY into the zip
+    pip install -r requirements.txt --target $(Build.ArtifactStagingDirectory)/package
+
+    echo "Copying application files..."
     cp -r static $(Build.ArtifactStagingDirectory)/package/
     cp -r templates $(Build.ArtifactStagingDirectory)/package/
     cp app.py $(Build.ArtifactStagingDirectory)/package/
     cp requirements.txt $(Build.ArtifactStagingDirectory)/package/
-  displayName: 'Package Frontend Files'
+    
+    echo "Contents of package directory:"
+    ls $(Build.ArtifactStagingDirectory)/package
+  displayName: 'Package Frontend and Dependencies'
 
 - task: PublishPipelineArtifact@1
   inputs:
