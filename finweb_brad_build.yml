@@ -13,7 +13,6 @@ variables:
     value: 'frontend'
 
 steps:
-# 1. Set Python version to ensure compatibility
 - task: UsePythonVersion@0
   inputs:
     versionSpec: '3.x'
@@ -24,18 +23,18 @@ steps:
     mkdir -p $(Build.ArtifactStagingDirectory)/package
 
     echo "Installing dependencies into package folder..."
-    # --target ensures libraries are installed LOCALLY into the zip
+    # This copies 'requests', 'flask', etc. directly into the artifact
     pip install -r requirements.txt --target $(Build.ArtifactStagingDirectory)/package
 
     echo "Copying application files..."
-    cp -r static $(Build.ArtifactStagingDirectory)/package/
-    cp -r templates $(Build.ArtifactStagingDirectory)/package/
+    cp -r static $(Build.ArtifactStagingDirectory)/package/ || echo "No static folder found"
+    cp -r templates $(Build.ArtifactStagingDirectory)/package/ || echo "No templates folder found"
     cp app.py $(Build.ArtifactStagingDirectory)/package/
     cp requirements.txt $(Build.ArtifactStagingDirectory)/package/
     
-    echo "Contents of package directory:"
+    echo "Verifying package contents (requests should be visible here):"
     ls $(Build.ArtifactStagingDirectory)/package
-  displayName: 'Package Frontend and Dependencies'
+  displayName: 'Install Dependencies and Package'
 
 - task: PublishPipelineArtifact@1
   inputs:
@@ -43,4 +42,3 @@ steps:
     artifact: '$(artifactName)'
     publishLocation: 'pipeline'
   displayName: 'Publish Frontend Pipeline Artifact'
-  condition: and(succeeded(), ne(variables['skip_build'], 'true'))
