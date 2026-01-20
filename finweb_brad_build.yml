@@ -8,22 +8,33 @@ trigger:
     exclude:
     - '*.yml'
 
-#pool:
-#  name: student-lab-pool
-
 variables:
   - name: artifactName
     value: 'frontend'
 
 steps:
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: '3.x'
+  displayName: 'Use Python 3.x'
+
 - script: |
-    echo "Packaging frontend app..."
-    mkdir $(Build.ArtifactStagingDirectory)/package
-    cp -r static $(Build.ArtifactStagingDirectory)/package/
-    cp -r templates $(Build.ArtifactStagingDirectory)/package/
+    echo "Creating package directory..."
+    mkdir -p $(Build.ArtifactStagingDirectory)/package
+
+    echo "Installing dependencies into package folder..."
+    # This copies 'requests', 'flask', etc. directly into the artifact
+    pip install -r requirements.txt --target $(Build.ArtifactStagingDirectory)/package
+
+    echo "Copying application files..."
+    cp -r static $(Build.ArtifactStagingDirectory)/package/ || echo "No static folder found"
+    cp -r templates $(Build.ArtifactStagingDirectory)/package/ || echo "No templates folder found"
     cp app.py $(Build.ArtifactStagingDirectory)/package/
     cp requirements.txt $(Build.ArtifactStagingDirectory)/package/
-  displayName: 'Package Frontend Files'
+    
+    echo "Verifying package contents (requests should be visible here):"
+    ls $(Build.ArtifactStagingDirectory)/package
+  displayName: 'Install Dependencies and Package'
 
 - task: PublishPipelineArtifact@1
   inputs:
@@ -31,4 +42,3 @@ steps:
     artifact: '$(artifactName)'
     publishLocation: 'pipeline'
   displayName: 'Publish Frontend Pipeline Artifact'
-  condition: and(succeeded(), ne(variables['skip_build'], 'true'))
